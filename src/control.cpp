@@ -1,0 +1,276 @@
+#include "control.h"
+#include <string.h>
+
+#include "trace.h"
+
+void control(control_t *control, uint32_t instruction)
+{
+    control->halt = false;
+    control->mem_read = false;
+    control->mem_write = false;
+    control->mem_to_reg = false;
+    control->alu_op = ALUOP_ADD;
+    control->branch = false;
+    control->branch_pol = false;
+    control->jump = false;
+    control->jump_reg = false;
+    control->mul_signed_a = false;
+    control->mul_signed_b = false;
+    control->mul_half = false;
+    control->rd = 0;
+    control->rs1 = 0;
+    control->rs2 = 0;
+    control->imm = 0;
+    control->alu_a_src = false;
+    control->alu_b_src = false;
+
+    // Decode instruction
+    int opcode = instruction & 0x7F;
+    switch (opcode)
+    {
+    case OP_RTYPE:
+    {
+        rtype_t inst;
+        inst.opcode = opcode;
+        inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
+        inst.funct3 = (funct3_r_t)((instruction & FUNCT3_MASK) >> FUNCT3_SHIFT);
+        inst.rs1 = (instruction & RS1_MASK) >> RS1_SHIFT;
+        inst.rs2 = (instruction & RS2_MASK) >> RS2_SHIFT;
+        inst.funct7 = (funct7_r_t)((instruction & FUNCT7_MASK) >> FUNCT7_SHIFT);
+
+        control->rd = inst.rd;
+        control->rs1 = inst.rs1;
+        control->rs2 = inst.rs2;
+
+        switch (inst.funct3)
+        {
+        case ADD_SUB_MUL:
+            switch (inst.funct7)
+            {
+            case ADD_SRL:
+                TRACE(TRACE_LEVEL_DEBUG, "ADD x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_ADD;
+                break;
+            case SUB_SRA:
+                TRACE(TRACE_LEVEL_DEBUG, "SUB x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_SUB;
+                break;
+            case MULT:
+                TRACE(TRACE_LEVEL_DEBUG, "MUL x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_MUL;
+                control->mul_signed_a = true;
+                control->mul_signed_b = true;
+                control->mul_half = false;
+                break;
+            }
+            break;
+        case AND:
+            TRACE(TRACE_LEVEL_DEBUG, "AND x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+            control->alu_op = ALUOP_AND;
+            break;
+        case OR:
+            TRACE(TRACE_LEVEL_DEBUG, "OR x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+            control->alu_op = ALUOP_OR;
+            break;
+        case XOR:
+            TRACE(TRACE_LEVEL_DEBUG, "XOR x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+            control->alu_op = ALUOP_XOR;
+            break;
+        case SLT_MULHSU:
+            switch (inst.funct7)
+            {
+            case 0:
+                TRACE(TRACE_LEVEL_DEBUG, "SLT x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_SLT;
+                break;
+            case MULT:
+                TRACE(TRACE_LEVEL_DEBUG, "MULHSU x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_MUL;
+                control->mul_signed_a = true;
+                control->mul_signed_b = false;
+                control->mul_half = true;
+                break;
+            }
+            break;
+        case SLTU_MULHU:
+            switch (inst.funct7)
+            {
+            case 0:
+                TRACE(TRACE_LEVEL_DEBUG, "SLTU x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_SLTU;
+                break;
+            case MULT:
+                TRACE(TRACE_LEVEL_DEBUG, "MULHU x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_MUL;
+                control->mul_signed_a = false;
+                control->mul_signed_b = false;
+                control->mul_half = true;
+                break;
+            }
+            break;
+        case SLL_MULH:
+            switch (inst.funct7)
+            {
+            case 0:
+                TRACE(TRACE_LEVEL_DEBUG, "SLL x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_SLL;
+                break;
+            case MULT:
+                TRACE(TRACE_LEVEL_DEBUG, "MULH x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_MUL;
+                control->mul_signed_a = true;
+                control->mul_signed_b = true;
+                control->mul_half = true;
+                break;
+            }
+            break;
+        case SRL_SRA:
+            switch (inst.funct7)
+            {
+            case ADD_SRL:
+                TRACE(TRACE_LEVEL_DEBUG, "SRL x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_SRL;
+                break;
+            case SUB_SRA:
+                TRACE(TRACE_LEVEL_DEBUG, "SRA x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
+                control->alu_op = ALUOP_SRA;
+                break;
+            }
+            break;
+        default:
+            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+            control->halt = true;
+            break;
+        }
+        break;
+    }
+
+    case OP_ITYPE:
+    {
+        itype_t inst;
+        inst.opcode = opcode;
+        inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
+        inst.funct3 = (funct3_i_t)((instruction & FUNCT3_MASK) >> FUNCT3_SHIFT);
+        inst.rs1 = (instruction & RS1_MASK) >> RS1_SHIFT;
+        inst.imm = (instruction & IMM_I_MASK) >> IMM_I_SHIFT;
+
+        control->rd = inst.rd;
+        control->rs1 = inst.rs1;
+        // Sign extend immediate
+        uint32_t imm = inst.imm;
+        if (imm & 0x800)
+        {
+            imm |= 0xFFFFF000;
+        }
+        control->imm = imm;
+
+        control->alu_b_src = true;
+
+        switch (inst.funct3)
+        {
+        case ADDI:
+            TRACE(TRACE_LEVEL_DEBUG, "ADDI x%02d, x%02d, %d\n", control->rd, control->rs1, (int32_t)control->imm);
+            control->alu_op = ALUOP_ADD;
+            break;
+        case SLTI:
+            TRACE(TRACE_LEVEL_DEBUG, "SLTI x%02d, x%02d, %d\n", control->rd, control->rs1, (int32_t)control->imm);
+            control->alu_op = ALUOP_SLT;
+            break;
+        case SLTIU:
+            TRACE(TRACE_LEVEL_DEBUG, "SLTIU x%02d, x%02d, %d\n", control->rd, control->rs1, control->imm);
+            control->alu_op = ALUOP_SLTU;
+            break;
+        case XORI:
+            TRACE(TRACE_LEVEL_DEBUG, "XORI x%02d, x%02d, %08x\n", control->rd, control->rs1, control->imm);
+            control->alu_op = ALUOP_XOR;
+            break;
+        case ORI:
+            TRACE(TRACE_LEVEL_DEBUG, "ORI x%02d, x%02d, %08x\n", control->rd, control->rs1, control->imm);
+            control->alu_op = ALUOP_OR;
+            break;
+        case ANDI:
+            TRACE(TRACE_LEVEL_DEBUG, "ANDI x%02d, x%02d, %08x\n", control->rd, control->rs1, control->imm);
+            control->alu_op = ALUOP_AND;
+            break;
+        case SLLI:
+            TRACE(TRACE_LEVEL_DEBUG, "SLLI x%02d, x%02d, %d\n", control->rd, control->rs1, control->imm);
+            control->alu_op = ALUOP_SLL;
+            break;
+        case SRLI_SRAI:
+            if (inst.imm & 0x400)
+            {
+                TRACE(TRACE_LEVEL_DEBUG, "SRAI x%02d, x%02d, %d\n", control->rd, control->rs1, control->imm & 0x1F);
+                control->alu_op = ALUOP_SRA;
+            }
+            else
+            {
+                TRACE(TRACE_LEVEL_DEBUG, "SRLI x%02d, x%02d, %d\n", control->rd, control->rs1, control->imm);
+                control->alu_op = ALUOP_SRL;
+            }
+            break;
+        default:
+            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+            control->halt = true;
+            break;
+        }
+        break;
+    }
+
+    case OP_LUI:
+    {
+        lui_t inst;
+        inst.opcode = opcode;
+        inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
+        inst.imm = (instruction & IMM_I_MASK) >> IMM_I_SHIFT;
+
+        control->rd = inst.rd;
+        control->imm = inst.imm << 12;
+
+        TRACE(TRACE_LEVEL_DEBUG, "LUI x%02d, 0x%08x\n", control->rd, control->imm);
+
+        break;
+    }
+
+    case OP_STYPE:
+    {
+        stype_t inst;
+        inst.opcode = opcode;
+        inst.rs1 = (instruction & RS1_MASK) >> RS1_SHIFT;
+        inst.rs2 = (instruction & RS2_MASK) >> RS2_SHIFT;
+        inst.funct3 = (funct3_s_t)((instruction & FUNCT3_MASK) >> FUNCT3_SHIFT);
+        inst.imm5 = (instruction & IMM5_S_MASK) >> IMM5_S_SHIFT;
+        inst.imm7 = (instruction & IMM7_S_MASK) >> IMM7_S_SHIFT;
+
+        control->rs1 = inst.rs1;
+        control->rs2 = inst.rs2;
+
+        // Compose immediate
+        uint32_t imm = inst.imm7 << 5;
+        imm |= inst.imm5;
+
+        // Sign extend immediate
+        if (imm & 0x800)
+        {
+            imm |= 0xFFFFF000;
+        }
+
+        control->imm = imm;
+        control->alu_b_src = true;
+
+        switch (inst.funct3)
+        {
+        case SW:
+            TRACE(TRACE_LEVEL_DEBUG, "SW x%02d, %d(x%02d)\n", control->rs2, (int32_t)control->imm, control->rs1);
+            control->mem_write = true;
+            break;
+        }
+
+        break;
+    }
+
+    default:
+        TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+        control->halt = true;
+        break;
+    }
+}

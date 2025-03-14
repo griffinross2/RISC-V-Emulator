@@ -31,6 +31,9 @@ public:
     // Load a byte from RAM
     uint8_t load_byte(uint32_t address);
 
+    // Load instruction from RAM
+    uint32_t load_instruction(uint32_t address);
+
     // Load a memory image from an Intel HEX file
     int load_memory_ihex(char *filename);
 

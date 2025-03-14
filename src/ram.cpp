@@ -55,6 +55,12 @@ uint32_t RAM::load_word(uint32_t address)
     return memory[address / 4];
 }
 
+uint32_t RAM::load_instruction(uint32_t address)
+{
+    TRACE(TRACE_LEVEL_DEBUG, "Loading instruction 0x%08X from 0x%08X\n", memory[address / 4], address);
+    return memory[address / 4];
+}
+
 uint16_t RAM::load_halfword(uint32_t address)
 {
     uint32_t word_address = address / 4;

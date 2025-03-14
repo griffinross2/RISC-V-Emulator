@@ -1,6 +1,8 @@
 #ifndef TRACE_H
 #define TRACE_H
 
+#include <stdio.h>
+
 #define TRACE_LEVEL_NONE 0
 #define TRACE_LEVEL_ERROR 1
 #define TRACE_LEVEL_WARNING 2
