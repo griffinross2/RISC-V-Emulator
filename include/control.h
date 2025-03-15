@@ -13,7 +13,7 @@ typedef enum : unsigned int
     OP_AUIPC = 0b0010111, // AUIPC U-type instruction
     OP_JAL = 0b1101111,   // JAL J-type instruction
     OP_JALR = 0b1100111,  // JALR I-type instruction
-    OP_LTYPE = 0b0000011, // L-type instruction
+    OP_LD_ITYPE = 0b0000011, // Load I-type instruction
 } opcode_t;
 
 typedef enum : unsigned int
@@ -49,6 +49,15 @@ typedef enum : unsigned int
 
 typedef enum : unsigned int
 {
+    LB = 0x0,
+    LH = 0x1,
+    LW = 0x2,
+    LBU = 0x4,
+    LHU = 0x5,
+} funct3_ld_i_t;
+
+typedef enum : unsigned int
+{
     SB = 0x0,
     SH = 0x1,
     SW = 0x2,
@@ -68,6 +77,8 @@ typedef enum : unsigned int
 #define FUNCT7_SHIFT 25
 #define IMM_I_MASK 0xFFF00000
 #define IMM_I_SHIFT 20
+#define IMM_U_MASK 0xFFFFF000
+#define IMM_U_SHIFT 12
 #define IMM5_S_MASK 0xF80
 #define IMM5_S_SHIFT 7
 #define IMM7_S_MASK 0xFE000000
@@ -91,6 +102,15 @@ typedef struct
     uint32_t rd : 5;       // Destination register
     uint32_t opcode : 7;   // Opcode
 } itype_t;
+
+typedef struct
+{
+    uint32_t imm : 12;     // Immediate
+    uint32_t rs1 : 5;      // Source register 1
+    funct3_ld_i_t funct3 : 3; // Function 3
+    uint32_t rd : 5;       // Destination register
+    uint32_t opcode : 7;   // Opcode
+} ld_itype_t;
 
 typedef struct
 {

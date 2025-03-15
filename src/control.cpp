@@ -138,7 +138,7 @@ void control(control_t *control, uint32_t instruction)
             }
             break;
         default:
-            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08X\n", instruction);
             control->halt = true;
             break;
         }
@@ -181,15 +181,15 @@ void control(control_t *control, uint32_t instruction)
             control->alu_op = ALUOP_SLTU;
             break;
         case XORI:
-            TRACE(TRACE_LEVEL_DEBUG, "XORI x%02d, x%02d, %08x\n", control->rd, control->rs1, control->imm);
+            TRACE(TRACE_LEVEL_DEBUG, "XORI x%02d, x%02d, %08X\n", control->rd, control->rs1, control->imm);
             control->alu_op = ALUOP_XOR;
             break;
         case ORI:
-            TRACE(TRACE_LEVEL_DEBUG, "ORI x%02d, x%02d, %08x\n", control->rd, control->rs1, control->imm);
+            TRACE(TRACE_LEVEL_DEBUG, "ORI x%02d, x%02d, %08X\n", control->rd, control->rs1, control->imm);
             control->alu_op = ALUOP_OR;
             break;
         case ANDI:
-            TRACE(TRACE_LEVEL_DEBUG, "ANDI x%02d, x%02d, %08x\n", control->rd, control->rs1, control->imm);
+            TRACE(TRACE_LEVEL_DEBUG, "ANDI x%02d, x%02d, %08X\n", control->rd, control->rs1, control->imm);
             control->alu_op = ALUOP_AND;
             break;
         case SLLI:
@@ -209,7 +209,7 @@ void control(control_t *control, uint32_t instruction)
             }
             break;
         default:
-            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08X\n", instruction);
             control->halt = true;
             break;
         }
@@ -221,12 +221,13 @@ void control(control_t *control, uint32_t instruction)
         lui_t inst;
         inst.opcode = opcode;
         inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
-        inst.imm = (instruction & IMM_I_MASK) >> IMM_I_SHIFT;
+        inst.imm = (instruction & IMM_U_MASK) >> IMM_U_SHIFT;
 
         control->rd = inst.rd;
         control->imm = inst.imm << 12;
+        control->alu_b_src = true;
 
-        TRACE(TRACE_LEVEL_DEBUG, "LUI x%02d, 0x%08x\n", control->rd, control->imm);
+        TRACE(TRACE_LEVEL_DEBUG, "LUI x%02d, 0x%08X\n", control->rd, control->imm);
 
         break;
     }
@@ -265,6 +266,42 @@ void control(control_t *control, uint32_t instruction)
             break;
         }
 
+        break;
+    }
+
+    case OP_LD_ITYPE:
+    {
+        ld_itype_t inst;
+        inst.opcode = opcode;
+        inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
+        inst.funct3 = (funct3_ld_i_t)((instruction & FUNCT3_MASK) >> FUNCT3_SHIFT);
+        inst.rs1 = (instruction & RS1_MASK) >> RS1_SHIFT;
+        inst.imm = (instruction & IMM_I_MASK) >> IMM_I_SHIFT;
+
+        control->rd = inst.rd;
+        control->rs1 = inst.rs1;
+        // Sign extend immediate
+        uint32_t imm = inst.imm;
+        if (imm & 0x800)
+        {
+            imm |= 0xFFFFF000;
+        }
+        control->imm = imm;
+
+        control->alu_b_src = true;
+
+        switch (inst.funct3)
+        {
+        case LW:
+            TRACE(TRACE_LEVEL_DEBUG, "LW x%02d, %d(x%02d)\n", control->rd, (int32_t)control->imm, control->rs1);
+            control->mem_read = true;
+            control->mem_to_reg = true;
+            break;
+        default:
+            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+            control->halt = true;
+            break;
+        }
         break;
     }
 
