@@ -79,6 +79,8 @@ typedef enum : unsigned int
 #define IMM_I_SHIFT 20
 #define IMM_U_MASK 0xFFFFF000
 #define IMM_U_SHIFT 12
+#define IMM_J_MASK 0xFFFFF000
+#define IMM_J_SHIFT 12
 #define IMM5_S_MASK 0xF80
 #define IMM5_S_SHIFT 7
 #define IMM7_S_MASK 0xFE000000
@@ -129,6 +131,13 @@ typedef struct
     uint32_t opcode : 7;   // Opcode
 } stype_t;
 
+typedef struct
+{
+    uint32_t imm_swizz : 20;   // Immediate (Swizzled)
+    uint32_t rd : 5;     // Destination register
+    uint32_t opcode : 7; // Opcode
+} jtype_t;
+
 typedef enum
 {
     ALUOP_ADD,  // Add
@@ -155,7 +164,6 @@ typedef struct
     bool branch;       // Branch
     bool branch_pol;   // Branch polarity
     bool jump;         // Jump to alu_out
-    bool jump_reg;     // Jump to register
     bool mul_signed_a; // Multiply signed a
     bool mul_signed_b; // Multiply signed b
     bool mul_half;     // Which half of the multiply

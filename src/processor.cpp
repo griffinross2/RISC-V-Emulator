@@ -61,7 +61,7 @@ void Processor::execute_instruction()
     uint32_t alu_out = alu_execute(alu_a, alu_b, ctrl.alu_op, ctrl.mul_signed_a, ctrl.mul_signed_b, ctrl.mul_half);
 
     // Write to register from ALU output
-    if (!ctrl.mem_read && !ctrl.jump_reg)
+    if (!ctrl.mem_read && !ctrl.jump)
     {
         registers.set_reg(ctrl.rd, ctrl.mem_to_reg ? ram->load_word(alu_out) : alu_out);
     }
@@ -73,7 +73,7 @@ void Processor::execute_instruction()
     }
 
     // Write to register (linking)
-    if (ctrl.jump_reg)
+    if (ctrl.jump)
     {
         registers.set_reg(ctrl.rd, pc + 4);
     }
@@ -84,8 +84,12 @@ void Processor::execute_instruction()
         ram->store_word(alu_out, rs2);
     }
 
-    // Increment the program counter
-    pc += 4;
+    // PC destination
+    if (ctrl.jump) {
+        pc = alu_out;
+    } else {
+        pc += 4;
+    }
 }
 
 void Processor::dump_state()

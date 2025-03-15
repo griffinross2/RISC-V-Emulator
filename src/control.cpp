@@ -13,7 +13,6 @@ void control(control_t *control, uint32_t instruction)
     control->branch = false;
     control->branch_pol = false;
     control->jump = false;
-    control->jump_reg = false;
     control->mul_signed_a = false;
     control->mul_signed_b = false;
     control->mul_half = false;
@@ -298,15 +297,63 @@ void control(control_t *control, uint32_t instruction)
             control->mem_to_reg = true;
             break;
         default:
-            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+            TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08X\n", instruction);
             control->halt = true;
             break;
         }
         break;
     }
 
+    case OP_JAL:
+    {
+        jtype_t inst;
+        inst.opcode = opcode;
+        inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
+        inst.imm_swizz = (instruction & IMM_J_MASK) >> IMM_J_SHIFT;
+        
+        control->rd = inst.rd;
+        // Unswizzle immediate
+        uint32_t imm20 = (inst.imm_swizz >> 20) & 0x1;
+        uint32_t imm10_1 = (inst.imm_swizz >> 9) & 0x3FF;
+        uint32_t imm11 = (inst.imm_swizz >> 8) & 0x1;
+        uint32_t imm19_12 = inst.imm_swizz & 0xFF;
+        uint32_t imm = (imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1);
+        // Sign extend immediate
+        if (imm & 0x100000)
+        {
+            imm |= 0xFFF00000;
+        }
+        control->imm = imm;
+
+        control->alu_a_src = true;
+        control->alu_b_src = true;
+        control->jump = true;
+    }
+
+    case OP_JALR:
+    {
+        itype_t inst;
+        inst.opcode = opcode;
+        inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
+        inst.rs1 = (instruction & RS1_MASK) >> RS1_SHIFT;
+        inst.imm = (instruction & IMM_I_MASK) >> IMM_I_SHIFT;
+
+        control->rd = inst.rd;
+        control->rs1 = inst.rs1;
+        // Sign extend immediate
+        uint32_t imm = inst.imm;
+        if (imm & 0x800)
+        {
+            imm |= 0xFFFFF000;
+        }
+        control->imm = imm;
+
+        control->alu_b_src = true;
+        control->jump = true;
+    }
+
     default:
-        TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08x\n", instruction);
+        TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08X\n", instruction);
         control->halt = true;
         break;
     }
