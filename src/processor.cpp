@@ -3,6 +3,7 @@
 #include "string.h"
 #include "control.h"
 #include "alu.h"
+#include "trace.h"
 
 Processor::Processor(RAM *ram, uint32_t start_address)
 {
@@ -86,8 +87,19 @@ void Processor::execute_instruction()
 
     // PC destination
     if (ctrl.jump) {
+        // Branch unconditionally
         pc = alu_out;
+    } else if (ctrl.branch) {
+        // Branch conditionally
+        if ((alu_out == 0) ^ ctrl.branch_pol) {
+            pc = ctrl.imm + pc;
+            TRACE(TRACE_LEVEL_DEBUG, "Branching to 0x%08X\n", pc);
+        } else {
+            TRACE(TRACE_LEVEL_DEBUG, "Branch not taken\n");
+            pc += 4;
+        }
     } else {
+        // No branch
         pc += 4;
     }
 }

@@ -309,14 +309,14 @@ void control(control_t *control, uint32_t instruction)
         jtype_t inst;
         inst.opcode = opcode;
         inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
-        inst.imm_swizz = (instruction & IMM_J_MASK) >> IMM_J_SHIFT;
+        inst.imm = (instruction & IMM_J_MASK) >> IMM_J_SHIFT;
         
         control->rd = inst.rd;
         // Unswizzle immediate
-        uint32_t imm20 = (inst.imm_swizz >> 20) & 0x1;
-        uint32_t imm10_1 = (inst.imm_swizz >> 9) & 0x3FF;
-        uint32_t imm11 = (inst.imm_swizz >> 8) & 0x1;
-        uint32_t imm19_12 = inst.imm_swizz & 0xFF;
+        uint32_t imm20 = (inst.imm >> 20) & 0x1;
+        uint32_t imm10_1 = (inst.imm >> 9) & 0x3FF;
+        uint32_t imm11 = (inst.imm >> 8) & 0x1;
+        uint32_t imm19_12 = inst.imm & 0xFF;
         uint32_t imm = (imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1);
         // Sign extend immediate
         if (imm & 0x100000)
@@ -325,9 +325,12 @@ void control(control_t *control, uint32_t instruction)
         }
         control->imm = imm;
 
+        TRACE(TRACE_LEVEL_DEBUG, "JAL x%02d, %d\n", control->rd, (int32_t)control->imm);
+
         control->alu_a_src = true;
         control->alu_b_src = true;
         control->jump = true;
+        break;
     }
 
     case OP_JALR:
@@ -348,8 +351,73 @@ void control(control_t *control, uint32_t instruction)
         }
         control->imm = imm;
 
+        TRACE(TRACE_LEVEL_DEBUG, "JALR x%02d, x%02d, %d\n", control->rd, control->rs1, (int32_t)control->imm);
+
         control->alu_b_src = true;
         control->jump = true;
+        break;
+    }
+
+    case OP_BTYPE:
+    {
+        btype_t inst;
+        inst.opcode = opcode;
+        inst.rs1 = (instruction & RS1_MASK) >> RS1_SHIFT;
+        inst.rs2 = (instruction & RS2_MASK) >> RS2_SHIFT;
+        inst.funct3 = (funct3_b_t)((instruction & FUNCT3_MASK) >> FUNCT3_SHIFT);
+        inst.imm5 = (instruction & IMM5_B_MASK) >> IMM5_B_SHIFT;
+        inst.imm7 = (instruction & IMM7_B_MASK) >> IMM7_B_SHIFT;
+
+        // Unswizzle immediate
+        uint32_t imm12 = (inst.imm7 >> 6) & 0x1;
+        uint32_t imm10_5 = inst.imm7 & 0x3F;
+        uint32_t imm11 = inst.imm5 & 0x1;
+        uint32_t imm4_1 = (inst.imm5 >> 1) & 0xF;
+        uint32_t imm = (imm4_1 << 1) | (imm10_5 << 5) | (imm11 << 11) | (imm12 << 12);
+
+        // Sign-extend immediate
+        if (imm & 0x800)
+        {
+            imm |= 0xFFFFF000;
+        }
+        control->imm = imm;
+        control->branch = true;
+        control->rs1 = inst.rs1;
+        control->rs2 = inst.rs2;
+
+        switch (inst.funct3) {
+            case BEQ:
+                TRACE(TRACE_LEVEL_DEBUG, "BEQ x%02d, x%02d, %d\n", control->rs1, control->rs2, (int32_t)control->imm);
+                control->alu_op = ALUOP_SUB;
+                control->branch_pol = 0;
+                break;
+            case BNE:
+                TRACE(TRACE_LEVEL_DEBUG, "BNE x%02d, x%02d, %d\n", control->rs1, control->rs2, (int32_t)control->imm);
+                control->alu_op = ALUOP_SUB;
+                control->branch_pol = 1;
+                break;
+            case BLT:
+                TRACE(TRACE_LEVEL_DEBUG, "BLT x%02d, x%02d, %d\n", control->rs1, control->rs2, (int32_t)control->imm);
+                control->alu_op = ALUOP_SLT;
+                control->branch_pol = 1;
+                break;
+            case BGE:
+                TRACE(TRACE_LEVEL_DEBUG, "BGE x%02d, x%02d, %d\n", control->rs1, control->rs2, (int32_t)control->imm);
+                control->alu_op = ALUOP_SLT;
+                control->branch_pol = 0;
+                break;
+            case BLTU:
+                TRACE(TRACE_LEVEL_DEBUG, "BLTU x%02d, x%02d, %d\n", control->rs1, control->rs2, (int32_t)control->imm);
+                control->alu_op = ALUOP_SLTU;
+                control->branch_pol = 1;
+                break;
+            case BGEU:
+                TRACE(TRACE_LEVEL_DEBUG, "BGEU x%02d, x%02d, %d\n", control->rs1, control->rs2, (int32_t)control->imm);
+                control->alu_op = ALUOP_SLTU;
+                control->branch_pol = 0;
+                break;
+        }
+        break;
     }
 
     default:

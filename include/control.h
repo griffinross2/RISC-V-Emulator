@@ -63,6 +63,16 @@ typedef enum : unsigned int
     SW = 0x2,
 } funct3_s_t;
 
+typedef enum : unsigned int
+{
+    BEQ = 0x0,
+    BNE = 0x1,
+    BLT = 0x4,
+    BGE = 0x5,
+    BLTU = 0x6,
+    BGEU = 0x7,
+} funct3_b_t;
+
 #define OPCODE_MASK 0x7F
 #define OPCODE_SHIFT 0
 #define RD_MASK 0xF80
@@ -85,6 +95,10 @@ typedef enum : unsigned int
 #define IMM5_S_SHIFT 7
 #define IMM7_S_MASK 0xFE000000
 #define IMM7_S_SHIFT 25
+#define IMM5_B_MASK 0xF80
+#define IMM5_B_SHIFT 7
+#define IMM7_B_MASK 0xFE000000
+#define IMM7_B_SHIFT 25
 
 typedef struct
 {
@@ -133,10 +147,20 @@ typedef struct
 
 typedef struct
 {
-    uint32_t imm_swizz : 20;   // Immediate (Swizzled)
+    uint32_t imm : 20;   // Immediate [20|10:1|11|19:12]
     uint32_t rd : 5;     // Destination register
     uint32_t opcode : 7; // Opcode
 } jtype_t;
+
+typedef struct
+{
+    uint32_t imm7 : 7;   // Immediate[12|10:5]
+    uint32_t rs2 : 5;    // Source register 2
+    uint32_t rs1 : 5;    // Source register 1
+    funct3_b_t funct3 : 3; // Function 3
+    uint32_t imm5 : 5;   // Immediate[4:1|11]
+    uint32_t opcode : 7; // Opcode
+} btype_t;
 
 typedef enum
 {
@@ -162,7 +186,7 @@ typedef struct
     bool mem_to_reg;   // Write to register from memory
     aluop_t alu_op;    // ALU operation
     bool branch;       // Branch
-    bool branch_pol;   // Branch polarity
+    bool branch_pol;   // Branch polarity (true - branch if zero, false - branch if not zero)
     bool jump;         // Jump to alu_out
     bool mul_signed_a; // Multiply signed a
     bool mul_signed_b; // Multiply signed b
