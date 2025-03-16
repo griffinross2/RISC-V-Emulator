@@ -133,7 +133,7 @@ typedef struct
     uint32_t imm : 20;   // Immediate
     uint32_t rd : 5;     // Destination register
     uint32_t opcode : 7; // Opcode
-} lui_t;
+} utype_t;
 
 typedef struct
 {

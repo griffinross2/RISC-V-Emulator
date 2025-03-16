@@ -217,7 +217,7 @@ void control(control_t *control, uint32_t instruction)
 
     case OP_LUI:
     {
-        lui_t inst;
+        utype_t inst;
         inst.opcode = opcode;
         inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
         inst.imm = (instruction & IMM_U_MASK) >> IMM_U_SHIFT;
@@ -227,6 +227,23 @@ void control(control_t *control, uint32_t instruction)
         control->alu_b_src = true;
 
         TRACE(TRACE_LEVEL_DEBUG, "LUI x%02d, 0x%08X\n", control->rd, control->imm);
+
+        break;
+    }
+
+    case OP_AUIPC:
+    {
+        utype_t inst;
+        inst.opcode = opcode;
+        inst.rd = (instruction & RD_MASK) >> RD_SHIFT;
+        inst.imm = (instruction & IMM_U_MASK) >> IMM_U_SHIFT;
+
+        control->rd = inst.rd;
+        control->imm = inst.imm << 12;
+        control->alu_a_src = true;
+        control->alu_b_src = true;
+
+        TRACE(TRACE_LEVEL_DEBUG, "AUIPC x%02d, 0x%08X\n", control->rd, control->imm);
 
         break;
     }
