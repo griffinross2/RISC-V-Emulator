@@ -25,6 +25,9 @@ void Processor::reset(uint32_t start_address)
 
     // Clear halt flag
     halt = false;
+
+    // Clear instruction count
+    instruction_count = 0;
 }
 
 bool Processor::is_halted()
@@ -34,6 +37,9 @@ bool Processor::is_halted()
 
 void Processor::execute_instruction()
 {
+    // Count the instruction
+    instruction_count++;
+
     // Fetch the instruction
     uint32_t instruction = ram->load_instruction(pc);
 
@@ -108,4 +114,6 @@ void Processor::dump_state()
 {
     printf("\nPC:  0x%08X  ", pc);
     registers.dump_state();
+
+    printf("%I64u instructions executed.\n", instruction_count);
 }

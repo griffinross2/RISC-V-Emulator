@@ -64,4 +64,6 @@ void RegisterFile::dump_state()
 
         printf("x%02d: 0x%08X  ", i, registers[i - 1]);
     }
+
+    printf("\n");
 }

@@ -36,6 +36,9 @@ private:
 
     // Halt flag
     bool halt;
+
+    // Instruction count
+    uint64_t instruction_count;
 };
 
 #endif // PROCESSOR_H
