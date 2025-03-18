@@ -330,7 +330,7 @@ void control(control_t *control, uint32_t instruction)
         
         control->rd = inst.rd;
         // Unswizzle immediate
-        uint32_t imm20 = (inst.imm >> 20) & 0x1;
+        uint32_t imm20 = (inst.imm >> 19) & 0x1;
         uint32_t imm10_1 = (inst.imm >> 9) & 0x3FF;
         uint32_t imm11 = (inst.imm >> 8) & 0x1;
         uint32_t imm19_12 = inst.imm & 0xFF;
