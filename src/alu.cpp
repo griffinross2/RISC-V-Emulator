@@ -26,17 +26,25 @@ uint32_t alu_execute(uint32_t a, uint32_t b, aluop_t aluop, bool mul_signed_a, b
         return (int32_t)a >> (b & 0x1F);
     case ALUOP_MUL:
     {
-        int32_t a_s = (int32_t)a;
-        int32_t b_s = (int32_t)b;
+        int64_t a_ext = 0;
+        int64_t b_ext = 0;
         if (mul_signed_a)
         {
-            a_s = (a_s > 0) ? a_s : -a_s;
+            a_ext = (int32_t)a;
+        }
+        else
+        {
+            a_ext = (uint32_t)a;
         }
         if (mul_signed_b)
         {
-            b_s = (b_s > 0) ? b_s : -b_s;
+            b_ext = (int32_t)b;
         }
-        int64_t result = (int64_t)a_s * (int64_t)b_s;
+        else
+        {
+            b_ext = (uint32_t)b;
+        }
+        int64_t result = a_ext * b_ext;
         if (mul_half)
         {
             return (uint32_t)(result >> 32);

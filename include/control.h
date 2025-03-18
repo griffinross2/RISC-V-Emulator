@@ -32,7 +32,7 @@ typedef enum : unsigned int
 {
     ADD_SRL = 0x00,
     SUB_SRA = 0x20,
-    MULT = 0x01,
+    MUL = 0x01,
 } funct7_r_t;
 
 typedef enum : unsigned int
@@ -180,23 +180,24 @@ typedef enum
 // Defines what the processor should do based on the instruction
 typedef struct
 {
-    bool halt;         // Halt
-    bool mem_read;     // Read from memory
-    bool mem_write;    // Write to memory
-    bool mem_to_reg;   // Write to register from memory
-    aluop_t alu_op;    // ALU operation
-    bool branch;       // Branch
-    bool branch_pol;   // Branch polarity (true - branch if zero, false - branch if not zero)
-    bool jump;         // Jump to alu_out
-    bool mul_signed_a; // Multiply signed a
-    bool mul_signed_b; // Multiply signed b
-    bool mul_half;     // Which half of the multiply
-    int rd;            // Destination register
-    int rs1;           // Source register 1
-    int rs2;           // Source register 2
-    uint32_t imm;      // Immediate value
-    bool alu_a_src;    // ALU source A (false = register, true = pc)
-    bool alu_b_src;    // ALU source B (false = register, true = immediate)
+    bool halt;                  // Halt
+    uint8_t mem_read;           // Read from memory (0 = none, 1 = byte, 2 = halfword, 3 = word)
+    bool mem_read_unsigned;     // Read from memory unsigned
+    uint8_t mem_write;          // Write to memory (0 = none, 1 = byte, 2 = halfword, 3 = word)
+    bool mem_to_reg;            // Write to register from memory
+    aluop_t alu_op;             // ALU operation
+    bool branch;                // Branch
+    bool branch_pol;            // Branch polarity (true - branch if zero, false - branch if not zero)
+    bool jump;                  // Jump to alu_out
+    bool mul_signed_a;          // Multiply signed a
+    bool mul_signed_b;          // Multiply signed b
+    bool mul_half;              // Which half of the multiply
+    int rd;                     // Destination register
+    int rs1;                    // Source register 1
+    int rs2;                    // Source register 2
+    uint32_t imm;               // Immediate value
+    bool alu_a_src;             // ALU source A (false = register, true = pc)
+    bool alu_b_src;             // ALU source B (false = register, true = immediate)
 } control_t;
 
 void control(control_t *control, uint32_t instruction);

@@ -6,8 +6,9 @@
 void control(control_t *control, uint32_t instruction)
 {
     control->halt = false;
-    control->mem_read = false;
-    control->mem_write = false;
+    control->mem_read_unsigned = false;
+    control->mem_read = 0;
+    control->mem_write = 0;
     control->mem_to_reg = false;
     control->alu_op = ALUOP_ADD;
     control->branch = false;
@@ -54,7 +55,7 @@ void control(control_t *control, uint32_t instruction)
                 TRACE(TRACE_LEVEL_DEBUG, "SUB x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_SUB;
                 break;
-            case MULT:
+            case MUL:
                 TRACE(TRACE_LEVEL_DEBUG, "MUL x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_MUL;
                 control->mul_signed_a = true;
@@ -82,7 +83,7 @@ void control(control_t *control, uint32_t instruction)
                 TRACE(TRACE_LEVEL_DEBUG, "SLT x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_SLT;
                 break;
-            case MULT:
+            case MUL:
                 TRACE(TRACE_LEVEL_DEBUG, "MULHSU x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_MUL;
                 control->mul_signed_a = true;
@@ -98,7 +99,7 @@ void control(control_t *control, uint32_t instruction)
                 TRACE(TRACE_LEVEL_DEBUG, "SLTU x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_SLTU;
                 break;
-            case MULT:
+            case MUL:
                 TRACE(TRACE_LEVEL_DEBUG, "MULHU x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_MUL;
                 control->mul_signed_a = false;
@@ -114,7 +115,7 @@ void control(control_t *control, uint32_t instruction)
                 TRACE(TRACE_LEVEL_DEBUG, "SLL x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_SLL;
                 break;
-            case MULT:
+            case MUL:
                 TRACE(TRACE_LEVEL_DEBUG, "MULH x%02d, x%02d x%02d\n", control->rd, control->rs1, control->rs2);
                 control->alu_op = ALUOP_MUL;
                 control->mul_signed_a = true;
@@ -276,9 +277,17 @@ void control(control_t *control, uint32_t instruction)
 
         switch (inst.funct3)
         {
+        case SB:
+            TRACE(TRACE_LEVEL_DEBUG, "SB x%02d, %d(x%02d)\n", control->rs2, (int32_t)control->imm, control->rs1);
+            control->mem_write = 1;
+            break;
+        case SH:
+            TRACE(TRACE_LEVEL_DEBUG, "SH x%02d, %d(x%02d)\n", control->rs2, (int32_t)control->imm, control->rs1);
+            control->mem_write = 2;
+            break;
         case SW:
             TRACE(TRACE_LEVEL_DEBUG, "SW x%02d, %d(x%02d)\n", control->rs2, (int32_t)control->imm, control->rs1);
-            control->mem_write = true;
+            control->mem_write = 3;
             break;
         }
 
@@ -308,10 +317,32 @@ void control(control_t *control, uint32_t instruction)
 
         switch (inst.funct3)
         {
+        case LB:
+            TRACE(TRACE_LEVEL_DEBUG, "LB x%02d, %d(x%02d)\n", control->rd, (int32_t)control->imm, control->rs1);
+            control->mem_read = 1;
+            control->mem_to_reg = true;
+            break;
+        case LH:
+            TRACE(TRACE_LEVEL_DEBUG, "LH x%02d, %d(x%02d)\n", control->rd, (int32_t)control->imm, control->rs1);
+            control->mem_read = 2;
+            control->mem_to_reg = true;
+            break;
         case LW:
             TRACE(TRACE_LEVEL_DEBUG, "LW x%02d, %d(x%02d)\n", control->rd, (int32_t)control->imm, control->rs1);
-            control->mem_read = true;
+            control->mem_read = 3;
             control->mem_to_reg = true;
+            break;
+        case LBU:
+            TRACE(TRACE_LEVEL_DEBUG, "LBU x%02d, %d(x%02d)\n", control->rd, (int32_t)control->imm, control->rs1);
+            control->mem_read = 1;
+            control->mem_to_reg = true;
+            control->mem_read_unsigned = true;
+            break;
+        case LHU:
+            TRACE(TRACE_LEVEL_DEBUG, "LHU x%02d, %d(x%02d)\n", control->rd, (int32_t)control->imm, control->rs1);
+            control->mem_read = 2;
+            control->mem_to_reg = true;
+            control->mem_read_unsigned = true;
             break;
         default:
             TRACE(TRACE_LEVEL_ERROR, "Illegal Instruction 0x%08X\n", instruction);

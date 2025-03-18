@@ -74,7 +74,41 @@ void Processor::execute_instruction()
     }
 
     // Read from memory (address in ALU output)
-    if (ctrl.mem_read)
+    if (ctrl.mem_read == 1)
+    {
+        if (ctrl.mem_read_unsigned)
+        {
+            registers.set_reg(ctrl.rd, (uint32_t)ram->load_byte(alu_out));
+        }
+        else
+        {
+            // Sign extend
+            uint32_t mem_val = (uint32_t)ram->load_byte(alu_out);
+            if (mem_val & 0x80)
+            {
+                mem_val |= 0xFFFFFF00;
+            }
+            registers.set_reg(ctrl.rd, mem_val);
+        }
+    }
+    else if (ctrl.mem_read == 2)
+    {
+        if (ctrl.mem_read_unsigned)
+        {
+            registers.set_reg(ctrl.rd, (uint32_t)ram->load_halfword(alu_out));
+        }
+        else
+        {
+            // Sign extend
+            uint32_t mem_val = (uint32_t)ram->load_halfword(alu_out);
+            if (mem_val & 0x8000)
+            {
+                mem_val |= 0xFFFF0000;
+            }
+            registers.set_reg(ctrl.rd, mem_val);
+        }
+    }
+    else if (ctrl.mem_read == 3)
     {
         registers.set_reg(ctrl.rd, ram->load_word(alu_out));
     }
@@ -86,7 +120,15 @@ void Processor::execute_instruction()
     }
 
     // Write to memory (address in ALU output)
-    if (ctrl.mem_write)
+    if (ctrl.mem_write == 1)
+    {
+        ram->store_byte(alu_out, (uint8_t)rs2);
+    }
+    else if (ctrl.mem_write == 2)
+    {
+        ram->store_halfword(alu_out, (uint16_t)rs2);
+    }
+    else if (ctrl.mem_write == 3)
     {
         ram->store_word(alu_out, rs2);
     }
